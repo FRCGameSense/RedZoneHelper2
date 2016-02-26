@@ -1,0 +1,14 @@
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\RedZoneHelper2.exe.config
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.csprojResolveAssemblyReference.cache
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.Form1.resources
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.Properties.Resources.resources
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.csproj.GenerateResource.Cache
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\RedZoneHelper2.exe
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\RedZoneHelper2.pdb
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\Newtonsoft.Json.dll
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\Newtonsoft.Json.xml
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.exe
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.pdb
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\MoreLinq.dll
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\bin\Debug\MoreLinq.xml
+C:\Users\ttremblay\Documents\GitHub\RedZoneHelper2\RedZoneHelper2\RedZoneHelper2\obj\Debug\RedZoneHelper2.SettingsForm.resources
