@@ -57,5 +57,16 @@ namespace RedZoneHelper2.Properties {
                 this["lastApiRequestDateTime"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.DateTime currentTime {
+            get {
+                return ((global::System.DateTime)(this["currentTime"]));
+            }
+            set {
+                this["currentTime"] = value;
+            }
+        }
     }
 }

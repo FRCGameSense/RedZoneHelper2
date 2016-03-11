@@ -20,8 +20,6 @@ namespace RedZoneHelper2
         List<FRCApi.Event> selectedEvents = new List<FRCApi.Event>();
         List<FIRSTRowMatch> matchesList = new List<FIRSTRowMatch>();
         List<DataGridView> mainScreenDGVs = new List<DataGridView>();
-        private DateTime mPrevDate;
-        private bool mBusy;
 
         public Form1()
         {
@@ -119,6 +117,8 @@ namespace RedZoneHelper2
             public string RedAlliance { get; set; }
             public string BlueAlliance { get; set; }
             public double RedZoneScore { get; set; }
+            public double DefensesScore { get; set; }
+            public double BouldersScore { get; set; }
 
             public double Red1AvgDefensesDamaged { get; set; }
             public double Red2AvgDefensesDamaged { get; set; }
@@ -153,6 +153,7 @@ namespace RedZoneHelper2
                 //Console.WriteLine(frcMatch.autoStartTime.ToUniversalTime());
                 this.RedAlliance = frcMatch.RedAllianceString;
                 this.BlueAlliance = frcMatch.BlueAllianceString;
+                
                 this.RedZoneScore = 1.0;
 
             }
@@ -181,11 +182,23 @@ namespace RedZoneHelper2
 
             public void calculateRedZoneScore()
             {
-                double avgBlueDefensesDamaged = (Blue1AvgDefensesDamaged + Blue2AvgDefensesDamaged + Blue3AvgDefensesDamaged) / 3;
-                double avgRedDefensesDamaged = (Red1AvgDefensesDamaged + Red2AvgDefensesDamaged + Red3AvgDefensesDamaged) / 3;
+                List<double> blueDefensesDamaged = new List<double>();
+                List<double> redDefensesDamaged = new List<double>();
+                blueDefensesDamaged.AddRange(new double[] { Blue1AvgDefensesDamaged, Blue2AvgDefensesDamaged, Blue3AvgDefensesDamaged});
+                redDefensesDamaged.AddRange(new double[] { Red1AvgDefensesDamaged, Red2AvgDefensesDamaged, Red3AvgDefensesDamaged });
+                double avgBlueDefensesDamaged = (blueDefensesDamaged.FindAll(i => i > blueDefensesDamaged.Min()).ToList().Sum()) / 2;
+                //double oldAvgBlueDefensesDamaged = (Blue1AvgDefensesDamaged + Blue2AvgDefensesDamaged + Blue3AvgDefensesDamaged) / 3;
+                double avgRedDefensesDamaged = (redDefensesDamaged.FindAll(i => i > redDefensesDamaged.Min()).ToList().Sum()) / 2;
+                //double avgRedDefensesDamaged = (Red1AvgDefensesDamaged + Red2AvgDefensesDamaged + Red3AvgDefensesDamaged) / 3;
 
-                double avgBlueBoulders = (Blue1AvgBoulders + Blue2AvgBoulders + Blue3AvgBoulders) / 3;
-                double avgRedBoulders = (Red1AvgBoulders + Red2AvgBoulders + Red3AvgBoulders) / 3;
+                List<double> blueBoulders = new List<double>();
+                List<double> redBoulders = new List<double>();
+                blueBoulders.AddRange(new double[] { Blue1AvgBoulders, Blue2AvgBoulders, Blue3AvgBoulders });
+                redBoulders.AddRange(new double[] { Red1AvgBoulders, Red2AvgBoulders, Red3AvgBoulders });
+                double avgBlueBoulders = (blueBoulders.FindAll(i => i > blueBoulders.Min()).ToList().Sum()) / 2;
+                //double oldAvgBlueBoulders = (Blue1AvgBoulders + Blue2AvgBoulders + Blue3AvgBoulders) / 3;
+                double avgRedBoulders = (redBoulders.FindAll(i => i > redBoulders.Min()).ToList().Sum()) / 2;
+                //double avgRedBoulders = (Red1AvgBoulders + Red2AvgBoulders + Red3AvgBoulders) / 3;
 
                 double expectedDefensesDamaged = avgBlueDefensesDamaged + avgRedDefensesDamaged;
                 double expectedDefensesDamagedDifference = Math.Abs(avgBlueDefensesDamaged - avgRedDefensesDamaged);
@@ -193,10 +206,10 @@ namespace RedZoneHelper2
                 double expectedBouldersDifference = Math.Abs(avgBlueBoulders - avgRedBoulders);
                 double expectedBoulders = avgBlueBoulders + avgRedBoulders;
 
-                double defenseScore = expectedDefensesDamaged - expectedDefensesDamagedDifference / 6;
-                double boulderScore = expectedBoulders - expectedBouldersDifference / 6;
+                this.DefensesScore = expectedDefensesDamaged - expectedDefensesDamagedDifference / 4 ;
+                this.BouldersScore = expectedBoulders - expectedBouldersDifference / 4;
 
-                this.RedZoneScore = defenseScore * 2 + boulderScore;
+                this.RedZoneScore = DefensesScore + BouldersScore;
                 /*
                 double matchTotalOPR = RedTotalOPR + BlueTotalOPR;
                 double oprDifference = Math.Abs(RedTotalOPR - BlueTotalOPR);
@@ -224,7 +237,7 @@ namespace RedZoneHelper2
 
         private void goButton_Click(object sender, EventArgs e)
         {
-            events = frcApi.getEvents(Properties.Settings.Default.selectedYear);//HelperDataStructures.ReadObjectFromFile<List<FRCApi.Event>>("frcEvents.bin");
+            events = HelperDataStructures.ReadObjectFromFile<List<FRCApi.Event>>("events.bin");//frcApi.getEvents(Properties.Settings.Default.selectedYear);//HelperDataStructures.ReadObjectFromFile<List<FRCApi.Event>>("frcEvents.bin");
 
             //find the desired events
             string eventCodesString = Properties.Settings.Default.eventCodesString;
@@ -248,7 +261,8 @@ namespace RedZoneHelper2
                 int redZoneQueueVal = 1;
                 foreach (FRCApi.HybridScheduleMatch m in schedule)
                 {
-                    if (m.actualStartTime != null)
+                    //DateTime compareDate = m.actualStartTime.Date + Properties.Settings.Default.currentTime.TimeOfDay;
+                    if (m.actualStartTime == null)//m.actualStartTime > Properties.Settings.Default.currentTime)
                     {
                         matchesList.Add(new FIRSTRowMatch(shortName, m, redZoneQueueVal));
                         redZoneQueueVal++;
@@ -265,7 +279,7 @@ namespace RedZoneHelper2
             foreach (FIRSTRowMatch frm in matchesList)
             {
                 // we don't care about matches that are really far out, so don't bother calculating stuff for them.
-                if (frm.M < (closestMatch + 16))
+                if (frm.QNum < (closestMatch + 10))
                 {
                     frm.Blue1AvgDefensesDamaged = getAverageDefensesDamaged((int)frm.Teams.Find(i => i.station == "Blue1").teamNumber);
                     frm.Blue2AvgDefensesDamaged = getAverageDefensesDamaged((int)frm.Teams.Find(i => i.station == "Blue2").teamNumber);
@@ -302,6 +316,7 @@ namespace RedZoneHelper2
 
         private void dateTimePicker1_ValueChanged(object sender, EventArgs e)
         {
+            /*
             if (!mBusy)
             {
                 mBusy = true;
@@ -312,13 +327,18 @@ namespace RedZoneHelper2
                 mBusy = false;
             }
             mPrevDate = dateTimePicker1.Value;
-
+            */
             DateTime time = dateTimePicker1.Value;
+            Properties.Settings.Default.currentTime = time;
+            Properties.Settings.Default.Save();
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            mPrevDate = dateTimePicker1.Value;
+            dateTimePicker1.Format = DateTimePickerFormat.Custom;
+            dateTimePicker1.CustomFormat = "yyyy-MM-dd HH:mm:ss";
+            dateTimePicker1.Value = DateTime.Now;
+            frcApi.loadRequestTimes();
         }
 
         private void Form1_Shown(object sender, EventArgs e)
@@ -335,7 +355,7 @@ namespace RedZoneHelper2
 
                 foreach (DataGridViewColumn column in d.Columns)
                 {
-                    if (column.Name.Contains("OPR") || column.Name.Contains("Score"))
+                    if (column.Name.Contains("Avg") || column.Name.Contains("Score"))
                     {
                         column.DefaultCellStyle.Format = "n2";
                         column.ValueType = typeof(double);
@@ -536,6 +556,11 @@ namespace RedZoneHelper2
         private void label2_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            frcApi.saveRequestTimes();
         }
     }
 }

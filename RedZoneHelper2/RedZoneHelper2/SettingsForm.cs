@@ -40,6 +40,18 @@ namespace RedZoneHelper2
         {
             eventCodesBox.Text = Properties.Settings.Default.eventCodesString;
             yearBox.Value = Properties.Settings.Default.selectedYear;
+            events = HelperDataStructures.ReadObjectFromFile<List<FRCApi.Event>>("events.bin");
+            events = events.OrderBy(o=>o.dateStart).ToList();
+            var autoComplete = new AutoCompleteStringCollection();
+            string[] eventNames = this.events.Select(x => x.name).ToArray();
+            autoComplete.AddRange(eventNames);
+            /*
+            foreach (string s in eventNames)
+            {
+                Console.WriteLine("Adding autocomplete: " + s);
+            }
+             * */
+            eventNameBox.AutoCompleteCustomSource = autoComplete;
         }
 
         private void refreshEventsListButton_Click(object sender, EventArgs e)
@@ -61,6 +73,10 @@ namespace RedZoneHelper2
 
             foreach (FRCApi.Event evt in events)
             {
+                if (evt.code.ToLower() == "scmb")
+                {
+                    Console.WriteLine("Bleh");
+                }
                 List<FRCApi.MatchResult> matchResults = frcApi.getMatchResults<FRCApi.MatchResult>(year, evt.code, !forceFullUpdateCheckBox.Checked);
                 if (matchResults != null && matchResults.Count > 0)
                 {
@@ -69,7 +85,7 @@ namespace RedZoneHelper2
 
                     if (playoffScoreDetails != null)
                     {
-                        matchScoreDetails.AddRange(frcApi.getScoreDetails<FRCApi.ScoreDetails2016>(year, evt.code, FRCApi.PlayoffMatchesString, !forceFullUpdateCheckBox.Checked));
+                        matchScoreDetails.AddRange(playoffScoreDetails);
                     }
 
                     if (matchResults != null && matchScoreDetails != null)
@@ -86,8 +102,25 @@ namespace RedZoneHelper2
             }
 
             HelperDataStructures.WriteObjectToFile<List<HelperDataStructures.MatchData2016>>("seasonMatchData.bin", seasonMatches);
+            HelperDataStructures.WriteObjectToFile<List<FRCApi.Event>>("events.bin", events);
 
+        }
 
+        private void addEventButton_Click(object sender, EventArgs e)
+        {
+            string currentText = eventCodesBox.Text.Replace(" ", "");
+            string eventCodeToAdd = events.Find(i => i.name.ToLower() == eventNameBox.Text.ToLower()).code;
+
+            if (currentText.Length > 0)
+            {
+                eventCodesBox.Text = currentText + "," + eventCodeToAdd;
+            }
+            else
+            {
+                eventCodesBox.Text = eventCodeToAdd;
+            }
+
+            eventNameBox.Clear();
         }
     }
 }

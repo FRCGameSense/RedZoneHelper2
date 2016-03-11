@@ -12,12 +12,47 @@ namespace RedZoneHelper2
     class FRCApi
     {
         private string baseUrl = "https://frc-api.firstinspires.org/v2.0";
-        Communicator communicator = new Communicator();
         public static string QualificationMatchesString = "qualification";
         public static string PlayoffMatchesString = "playoff";
+        private Dictionary<string, DateTime> requestTimesDict = new Dictionary<string, DateTime>();
 
         public FRCApi() { }
 
+        public bool saveRequestTimes()
+        {
+            try
+            {
+                HelperDataStructures.WriteObjectToFile<Dictionary<string, DateTime>>("requestTimes.bin", requestTimesDict);
+                return true;
+            }
+            catch (Exception e){
+                Console.WriteLine(e.Message);
+                return false;
+            }
+        }
+
+        public bool loadRequestTimes()
+        {
+            try
+            {
+                this.requestTimesDict = HelperDataStructures.ReadObjectFromFile<Dictionary<string, DateTime>>("requestTimes.bin");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return false;
+            }
+        } 
+
+
+        /// <summary>
+        /// Generic API request for generic objects
+        /// </summary>
+        /// <typeparam name="T">Object type to return</typeparam>
+        /// <param name="uri">FRC API endpoint</param>
+        /// <param name="useIfModifiedSince">boolean for whether or not to use the If-Modified-Since header</param>
+        /// <returns></returns>
         private T handleAPIRequest<T>(string uri, bool useIfModifiedSince = true)
         {
             T apiObj;
@@ -29,7 +64,7 @@ namespace RedZoneHelper2
                     //if there isn't a cached file, we need to force an API update to create one.
                     useIfModifiedSince = false;
                 }
-                string api_response = communicator.sendAndGetRawResponse(uri, useIfModifiedSince);
+                string api_response = sendAndGetRawResponse(uri, useIfModifiedSince);
 
                 if (api_response != null)
                 {
@@ -42,7 +77,7 @@ namespace RedZoneHelper2
                     return default(T);
                 }
             }
-            catch (Exception ex)
+            catch (WebException ex)
             {
                 if (((HttpWebResponse)((WebException)ex.InnerException).Response).StatusCode == HttpStatusCode.NotModified)
                 {
@@ -54,7 +89,7 @@ namespace RedZoneHelper2
                     }
                     catch (System.IO.FileNotFoundException fnfe)
                     {
-                        throw new Exception("No cached object found.", fnfe); 
+                        throw new Exception("No cached object found.", fnfe);
                     }
                 }
                 else
@@ -137,8 +172,17 @@ namespace RedZoneHelper2
         {
             string uri = baseUrl + "/" + season.ToString() + "/events";
 
-            List<Event> events = handleAPIRequest<List<Event>>(uri, useIfModifiedSince);
-            return events;
+            EventsList eventsList = handleAPIRequest<EventsList>(uri, useIfModifiedSince);
+
+            if (eventsList != null)
+            {
+                return eventsList.Events;
+            }
+            else
+            {
+                return default(List<Event>);
+            }
+
             /*
             List<Event> events;
 
@@ -166,7 +210,7 @@ namespace RedZoneHelper2
              * */
         }
 
-        
+
 
         /// <summary>
         /// Gets the raw JSON string for events lists from the FRC API
@@ -176,7 +220,7 @@ namespace RedZoneHelper2
         public string getEventsListJsonString(int season, bool useIfModifiedSince = true)
         {
             string uri = baseUrl + "/" + season.ToString() + "/events";
-            string api_response = communicator.sendAndGetRawResponse(uri);
+            string api_response = sendAndGetRawResponse(uri);
 
             return api_response;
         }
@@ -220,7 +264,7 @@ namespace RedZoneHelper2
         public List<ScheduleMatch> getSchedule(int season, string eventCode, string tournamentLevel, bool useIfModifiedSince = true)
         {
             string uri = baseUrl + "/" + season.ToString() + "/schedule/" + eventCode + "/" + tournamentLevel;
-            string api_response = communicator.sendAndGetRawResponse(uri);
+            string api_response = sendAndGetRawResponse(uri);
             //Console.WriteLine(api_response);
             if (api_response != null)
             {
@@ -258,7 +302,7 @@ namespace RedZoneHelper2
         public List<T> getEventRankings<T>(int season, string eventCode, bool useIfModifiedSince = true)
         {
             string uri = baseUrl + "/" + season.ToString() + "/rankings/" + eventCode;
-            string api_response = communicator.sendAndGetRawResponse(uri);
+            string api_response = sendAndGetRawResponse(uri);
             if (api_response != null)
             {
                 List<T> rankings = JsonConvert.DeserializeObject<EventRankings<T>>(api_response).Rankings;
@@ -322,15 +366,15 @@ namespace RedZoneHelper2
         [Serializable]
         public class HybridScheduleMatch
         {
-            public DateTime actualStartTime { get; set; }
+            public DateTime? actualStartTime { get; set; }
             public string description { get; set; }
             public int matchNumber { get; set; }
-            public int scoreRedFinal { get; set; }
-            public int scoreRedFoul { get; set; }
-            public int scoreRedAuto { get; set; }
-            public int scoreBlueFinal { get; set; }
-            public int scoreBlueFoul { get; set; }
-            public int scoreBlueAuto { get; set; }
+            public int? scoreRedFinal { get; set; }
+            public int? scoreRedFoul { get; set; }
+            public int? scoreRedAuto { get; set; }
+            public int? scoreBlueFinal { get; set; }
+            public int? scoreBlueFoul { get; set; }
+            public int? scoreBlueAuto { get; set; }
             public DateTime startTime { get; set; }
             public string tournamentLevel { get; set; }
             public List<ScheduleTeam> Teams { get; set; }
@@ -440,7 +484,7 @@ namespace RedZoneHelper2
             public int? teamNumber { get; set; }
             public string station { get; set; }
             public bool surrogate { get; set; }
-            public bool dq { get; set; }
+            public bool? dq { get; set; }
 
             public ScheduleTeam() { }
         }
@@ -632,8 +676,6 @@ namespace RedZoneHelper2
         [Serializable]
         public class ScoreDetails2016
         {
-            public string coopertition { get; set; }
-            public int coopertitionPoints { get; set; }
             public string matchLevel { get; set; }
             public int matchNumber { get; set; }
             public List<AllianceScoreDetails2016> alliances { get; set; }
@@ -772,61 +814,66 @@ namespace RedZoneHelper2
         }
 
 
-        /// <summary>
-        /// Communicates with the FRC API
-        /// </summary>
-        private class Communicator
+        public string sendAndGetRawResponse(string uri, bool useIfModifiedSince = true)
         {
-            public string sendAndGetRawResponse(string uri, bool useIfModifiedSince = true)
+            var request = System.Net.WebRequest.Create(uri) as System.Net.HttpWebRequest;
+            request.KeepAlive = true;
+
+            ///REMOVE AFTER FRC FIXES IT?
+            //request.ServerCertificateValidationCallback += (o, c, ch, er) => true;
+
+            string token = "TYTREMBLAY:C272D991-944E-49D7-B10E-27BA5EBB598B";
+
+            string encodedToken = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(token));
+
+            request.Headers.Add("Authorization: Basic " + encodedToken);
+
+            if (useIfModifiedSince)
             {
-                var request = System.Net.WebRequest.Create(uri) as System.Net.HttpWebRequest;
-                request.KeepAlive = true;
-
-                ///REMOVE AFTER FRC FIXES IT?
-                //request.ServerCertificateValidationCallback += (o, c, ch, er) => true;
-
-                string token = "TYTREMBLAY:C272D991-944E-49D7-B10E-27BA5EBB598B";
-
-                string encodedToken = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(token));
-
-                request.Headers.Add("Authorization: Basic " + encodedToken);
-                if (useIfModifiedSince)
+                DateTime lastApiRequestDateTime;
+                if (requestTimesDict.TryGetValue(uri, out lastApiRequestDateTime))
                 {
-                    DateTime lastApiRequestDateTime = Properties.Settings.Default.lastApiRequestDateTime;
                     request.IfModifiedSince = lastApiRequestDateTime;
                 }
-
-                request.Method = "GET";
-
-                request.Accept = "application/json";
-                request.ContentLength = 0;
-
-                string responseContent = null;
-                Properties.Settings.Default.lastApiRequestDateTime = DateTime.Now;//new DateTime(1999, 1,1,0,0,0, DateTimeKind.Utc);
-                Properties.Settings.Default.Save();
-                try
+                else
                 {
-                    using (var response = request.GetResponse() as System.Net.HttpWebResponse)
-                    {
-                        using (var reader = new System.IO.StreamReader(response.GetResponseStream()))
-                        {
-                            responseContent = reader.ReadToEnd();
-                        }
-                    }
-
-                    return responseContent;
+                    //we haven't done a request for this yet, so add the current time for later use.
+                    requestTimesDict.Add(uri, DateTime.Now);
                 }
-                catch (WebException ex)
-                {
-                    if (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotModified)
-                    {
-                        //no changes have been made
-                        throw new Exception("API Not Modified", ex);
-                    }
-                }
-
-                return null;
+                //DateTime lastApiRequestDateTime = Properties.Settings.Default.lastApiRequestDateTime;
+                
             }
+
+            request.Method = "GET";
+
+            request.Accept = "application/json";
+            request.ContentLength = 0;
+
+            string responseContent = null;
+
+            try
+            {
+                using (var response = request.GetResponse() as System.Net.HttpWebResponse)
+                {
+                    using (var reader = new System.IO.StreamReader(response.GetResponseStream()))
+                    {
+                        responseContent = reader.ReadToEnd();
+                    }
+                }
+
+
+                return responseContent;
+            }
+            catch (WebException ex)
+            {
+                if (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotModified)
+                {
+                    //no changes have been made
+                    throw new WebException("API Not Modified", ex);
+                }
+            }
+
+            return null;
         }
     }
 }
